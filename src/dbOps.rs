@@ -1,7 +1,8 @@
 use sqlx::{postgres::PgPoolOptions, Connection, PgConnection, Executor, Pool, Postgres, Error};
 
-#[path = "types.rs"]
-mod types;
+// For including the Utils Definition
+#[path = "utils.rs"]
+mod utils;
 
 #![allow(non_snake_case)]
 
@@ -62,9 +63,9 @@ async fn ModifyRecord(
 // range will typically be something like 100
 async fn SearchRange(
     pool: &sqlx::Pool<sqlx::Sqlite>, 
-    block: &types::Block, 
+    block: &utils::Block, 
     searchArea: u32
-) -> Result<Vec<types::Block>, sqlx::Error> {
+) -> Result<Vec<utils::Block>, sqlx::Error> {
     // Convert the range to an i32 to match your coordinate types
     let range = searchArea as i32;
 
@@ -95,7 +96,7 @@ async fn SearchRange(
 
         let nameVal: String = row.get::<String, &str>("name");
 
-        let newBlock = types::Block {
+        let newBlock = utils::Block {
             x: xVal,
             y: yVal,
             z: zVal,
