@@ -1,7 +1,7 @@
 local Turtle = {}
 Turtle.__index = Turtle
 
-local API_URL = "http://your-api-server"
+local API_URL = "http://127.0.0.1:3000"
 local lastTime = os.time()
 local updateRate = 1/20
 local directionToIndex = {

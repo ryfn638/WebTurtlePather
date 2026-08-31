@@ -1,41 +1,37 @@
-use std::net::TcpListener;
-use std::io::Write;
-use std::fs;
+use axum::{routing::post, Router};
+use std::env;
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
-#[path = "dbLink.rs"]
-mod dblink;
+#[path = "serialize_types.rs"]
+mod serialize_types;
 
 #[tokio::main]
-async fn main()
-{
-    println!("Starting Server");
-    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
-    println!("Server is running on port 8080!");
+async fn main() {
+    dotenvy::dotenv().ok();
 
-    match dblink::ConnectDB().await {
-        Ok(_) => println!("Database has been connected"),
-        Err(e) => println!("Could not connect to databases: {}", e),
-    }
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("High-performance pathfinder listening on http://{}", addr);
 
-    for stream in listener.incoming() 
-    {
-        let mut stream = stream.unwrap();
-        println!("Received post");
+    // 1. Establish the PostgreSQL Connection Pool
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL environment variable must be set in .env");
+    let pool = sqlx::PgPool::connect(&database_url)
+        .await
+        .expect("Failed to connect to PostgreSQL database");
 
+    // 2. Build the router and attach the database pool as shared state
+    let app = Router::new()
+        .route("/path", post(serialize_types::calculate_path))
+        .with_state(pool);
 
-        let htmlContent = fs::read_to_string("site.html")
-            .unwrap_or_else(|_| "<h1>Error: site.html not found!</h1>".to_string());
+    // 3. Bind the async TCP listener
+    let listener = TcpListener::bind(addr)
+        .await
+        .expect("Failed to bind to port 3000");
 
-        let length = htmlContent.len();
-
-        let response = format!(
-            "HTTP/1.1 200 OK\r\n\
-            Content-Type: text/html\r\n\
-            Content-Length: {length}\r\n\
-            \r\n\
-            {htmlContent}"
-        );
-
-        stream.write_all(response.as_bytes()).unwrap();
-    }
+    // 4. Run the high-concurrency server engine
+    axum::serve(listener, app)
+        .await
+        .expect("Server runtime error encountered");
 }
