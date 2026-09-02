@@ -1,0 +1,86 @@
+warning: `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
+help: to pin the edition, run `cargo fix --manifest-path c:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs`
+   0.021008700s  INFO prepare_target{force=false package_id=db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs) target="db_ops"}: cargo::core::compiler::fingerprint: fingerprint error for db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs)/Check { test: false }/TargetInner { name: "db_ops", doc: true, ..: with_path("c:\\Users\\ryanf\\Documents\\TurtleAPIServer\\src\\db_ops.rs", Edition2024) }
+   0.021062300s  INFO prepare_target{force=false package_id=db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs) target="db_ops"}: cargo::core::compiler::fingerprint:     err: failed to read `c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\.fingerprint\db_ops-0d978b7816d307ee\bin-db_ops`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_libgit2_prerelease
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: git_midx_writer_dump
+  16: git_filter_source_repo
+  17: git_midx_writer_dump
+  18: BaseThreadInitThunk
+  19: RtlUserThreadStart
+   0.036449800s  INFO prepare_target{force=false package_id=db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs) target="db_ops"}: cargo::core::compiler::fingerprint: fingerprint error for db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs)/Check { test: true }/TargetInner { name: "db_ops", doc: true, ..: with_path("c:\\Users\\ryanf\\Documents\\TurtleAPIServer\\src\\db_ops.rs", Edition2024) }
+   0.036483600s  INFO prepare_target{force=false package_id=db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs) target="db_ops"}: cargo::core::compiler::fingerprint:     err: failed to read `c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\.fingerprint\db_ops-00fbf163d83c28be\test-bin-db_ops`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_libgit2_prerelease
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: git_midx_writer_dump
+  16: git_filter_source_repo
+  17: git_midx_writer_dump
+  18: BaseThreadInitThunk
+  19: RtlUserThreadStart
+    Checking db_ops v0.0.0 (C:\Users\ryanf\Documents\TurtleAPIServer\src\db_ops.rs)
+error: the option `Z` is only accepted on the nightly compiler
+
+help: consider switching to a nightly toolchain: `rustup default nightly`
+
+note: selecting a toolchain with `+toolchain` arguments require a rustup proxy; see <https://rust-lang.github.io/rustup/concepts/index.html>
+
+note: for more information about Rust's stability policy, see <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#unstable-features>
+
+error: 1 nightly option were parsed
+
+error: the option `Z` is only accepted on the nightly compiler
+
+help: consider switching to a nightly toolchain: `rustup default nightly`
+
+note: selecting a toolchain with `+toolchain` arguments require a rustup proxy; see <https://rust-lang.github.io/rustup/concepts/index.html>
+
+note: for more information about Rust's stability policy, see <https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#unstable-features>
+
+error: 1 nightly option were parsed
+
+error: could not compile `db_ops` (bin "db_ops" test)
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name db_ops --edition=2024 db_ops.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=d7c9f1812bdde7dc -C extra-filename=-00fbf163d83c28be --out-dir c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\deps -C incremental=c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\incremental -Z crate-attr=feature(frontmatter) -Z crate-attr=allow(unused_features) -L dependency=c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\deps` (exit code: 1)
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `db_ops` (bin "db_ops")
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name db_ops --edition=2024 db_ops.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=69e65ac997d7c331 -C extra-filename=-0d978b7816d307ee --out-dir c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\deps -C incremental=c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\incremental -Z crate-attr=feature(frontmatter) -Z crate-attr=allow(unused_features) -L dependency=c:\Users\ryanf\Documents\TurtleAPIServer\src\../../TurtleAPIServer/builds\debug\deps` (exit code: 1)

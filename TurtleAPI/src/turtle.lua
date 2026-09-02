@@ -1,6 +1,11 @@
 local Turtle = {}
 Turtle.__index = Turtle
 local API_URL = "http://127.0.0.1:3000"
+local PATH_ENDPOINT = API_URL .. "/path"
+local BLOCK_ENDPOINT = API_URL .. "/block"
+local PING_ENDPOINT = API_URL .. "/ping"
+
+local MIN_FUEL_REQUIREMENT = 100;
 local lastTime = os.time()
 local updateRate = 1/20
 local directionToIndex = {
@@ -9,7 +14,6 @@ local directionToIndex = {
 	["south"] = 3,
 	["west"] = 4
 }
-
 -- Which way each compass index faces, in block offsets.
 -- Minecraft: north is -Z, east is +X, south is +Z, west is -X
 local directionOffsets = {
@@ -26,11 +30,15 @@ local function GetCompassDirectionIndex(direction)
 	if (index) then return index end
 	return -1
 end
+
 function CreatePoint(x, y, z)
-	local point = {x = x or 0, y = y or 0, z = z or 0 }
+	local point = {x = x or 0, y = y or 0, z = z or 0}
 	setmetatable(point, {
 		__newindex = function(t, key, value)
-			error("Cannot add new coordinate at" .. tostring(key))
+			error("Cannot add new coordinate at " .. tostring(key))
+		end,
+		__index = function(t, key)
+			error("Cannot read unknown coordinate " .. tostring(key))
 		end
 	})
 	return point
@@ -44,54 +52,58 @@ end
 --     track of how to get back to it
 --     Fuel Points movements take priority
 --     Over instructions, this can be ignored
---     If the user calls SetFuelRecall(false)
+--     If the user calls IgnoreFuelRecall()
 -- Never get rid of the step recall, but for sure this'll save fuel
 -- Init() -> Initialises a Turtle with a name
 function Turtle:Init(name, direction, posX, posY, posZ)
-	print(string.format("Initialising Turtle with name %s", name))
- 
-	local instance = setmetatable({}, self)
- 
-	-- Turtle Variables
-	instance.name = name
-	-- Accept either "north" or the raw index
-	if (type(direction) == "string") then
-		instance.direction = GetCompassDirectionIndex(direction)
-	else
-		instance.direction = direction or 1
-	end
-	if (instance.direction == -1) then
-		error("Unknown starting direction: " .. tostring(direction))
-	end
-	instance.position = CreatePoint(posX, posY, posZ)
-	instance.fuelLevel = turtle.getFuelLevel()
-	instance.inventorySpace = instance:GetInventorySpace()
-	instance.doesFuelRecall = true
-	instance.running = false
-	instance.homeCost = 0 -- Assuming you're initialising it in the home
-	-- If the fuelBuffer, is 2 times larger than manhattan distance to the neastest fuel source, just requests the coordinates back to the fuel source
-	-- I dont like this though, this is an estimated guess, it may be fine for the first return. but for complex caves, I'd like a better approach
-	-- Try to think of one
-	instance.fuelBuffer = 2;
-	-- Known blocks, and their data
-	instance.knownBlocks = {}
-	instance.blockData = {}
-	-- Each entry is a Point created by CreatePoint
-	instance.fuelSources = {}
-	instance.storageSources = {}
-	instance.toolSources = {}
- 
-	return instance
+    print(string.format("Initialising Turtle with name %s", name))
+
+    local instance = setmetatable({}, self)
+
+    -- Turtle Variables
+    instance.name = name
+		-- Accept either "north" or the raw index
+		if (type(direction) == "string") then
+			instance.direction = GetCompassDirectionIndex(direction)
+		else
+			instance.direction = direction or 1
+		end
+		if (instance.direction == -1) then
+			error("Unknown starting direction: " .. tostring(direction))
+		end
+
+		instance.position = CreatePoint(posX, posY, posZ)
+
+
+    instance.fuelLevel = turtle.getFuelLevel()
+    instance.inventorySpace = self:GetInventorySpace()
+    instance.doesFuelRecall = true
+		instance.running = false
+    instance.homeCost = 0 -- Assuming you're initialising it in the home
+		-- If the fuelBuffer, is 2 times larger than manhattan distance to the neastest fuel source, just requests the coordinates back to the fuel source
+		-- I dont like this though, this is an estimated guess, it may be fine for the first return. but for complex caves, I'd like a better approach
+		-- Try to think of one
+		instance.fuelBuffer = 2;
+		-- Known blocks, and their data
+		instance.knownBlocks = {}
+		instance.blockData = {}
+		-- Each entry is a Point created by CreatePoint
+    instance.fuelSources = {}
+    instance.storageSources = {}
+    instance.toolSources = {}
+
+		return instance
 end
 -- Euclidean distance to the point
 -- Maybe can do something better
 function Turtle:GetDistance(location)
-	return math.sqrt(
-		(self.position.x - location.x) ^ 2 +
-		(self.position.y - location.y) ^ 2 +
-		(self.position.z - location.z) ^ 2
-	)
+    return math.sqrt(
+        (self.position.x - location.x) ^ 2 +
+        (self.position.y - location.y) ^ 2 +
+        (self.position.z - location.z) ^ 2
+    )
 end
+
 -- General function for getting the nearest source
 -- Returns a Point object
 -- returns the turtle position if none are in the list
@@ -108,18 +120,29 @@ function Turtle:GetNearestSource(source)
 	end
 	return closestSource
 end
+
 -- This updates at a rate of 20Hz by default
 function Turtle:Run(controlFunc)
 	self.running = true
+	lastTime = os.clock()
 	while self.running do
 		-- Control Func is the user instructions
 		controlFunc()
-		local currentTime = os.time()
-		if (currentTime - lastTime >= 5) then -- Every 5 Seconds, send an update over to the server
+
+		self:RegisterFront()
+		self:RegisterUp()
+		self:RegisterDown()
+
+		local currentTime = os.clock()
+		if (currentTime - lastTime >= 5) then -- Every 5 Seconds, send an update over to the
 			self:SendSeenBlocks() -- Update the API with the known blocks every 5 seconds
-			if (self.doesFuelRecall) then
+
+
+			if (self.fuelLevel < MIN_FUEL_REQUIREMENT) then
+				-- If the fuel level is low then pursue the source
 				self:PursueSource(self.fuelSources, function() self:Refuel() end)
 			end
+
 			-- Dump inventory loop
 			local availSlots = self:GetInventorySpace()
 			if (availSlots == 0) then
@@ -131,15 +154,16 @@ function Turtle:Run(controlFunc)
 		self:UpdateFuel()
 	end
 end
+
 function Turtle:Refuel()
 	turtle.select(1)
 	if (turtle.refuel()) then
 		print("Refuelled")
-		self:UpdateFuel()
-		return true
+	else
+		print("No fuel available")
 	end
-	print("No fuel available")
-	return false
+
+	self.fuelLevel = turtle.getFuelLevel()
 end
 function Turtle:DumpInventory()
 	for slot = 2, 16 do
@@ -158,7 +182,7 @@ function Turtle:PursueSource(source, action)
 	if (path == nil) then
 		print("Failed to find source")
 		return
-	end
+	 end
 	self:FollowPath(path)
 	action()
 	local returnPath = self:RequestPath(origin)
@@ -198,20 +222,12 @@ function Turtle:ScanSurroundings()
 	self:RegisterUp()
 	self:RegisterDown()
 end
--- The block position directly in front of the turtle
-function Turtle:GetFrontPosition()
-	local offset = directionOffsets[self.direction]
-	return CreatePoint(
-		self.position.x + offset.x,
-		self.position.y,
-		self.position.z + offset.z
-	)
-end
 -- Registers whatever is directly infront
 function Turtle:RegisterFront()
 	local success, data = self:Inspect()
 	if (not success) then return end
-	table.insert(self.knownBlocks, self:GetFrontPosition())
+	local offset = directionOffsets[self.direction]
+	table.insert(self.knownBlocks, CreatePoint(self.position.x + offset.x, self.position.y, self.position.z + offset.z))
 	table.insert(self.blockData, data)
 end
 function Turtle:RegisterUp()
@@ -226,19 +242,26 @@ function Turtle:RegisterDown()
 	table.insert(self.knownBlocks, CreatePoint(self.position.x, self.position.y - 1, self.position.z))
 	table.insert(self.blockData, data)
 end
+
 -- Sends seen objects to the http server API
 function Turtle:SendSeenBlocks()
 	if (next(self.knownBlocks) == nil) then return true end
 	print("Sending seen blocks")
-	local payload = textutils.serializeJSON({
-		turtle_id = os.getComputerID(),
-		block_updates = self.knownBlocks,
-		block_data = self.blockData
-	})
-	local response = http.post(API_URL, payload, {["Content-Type"] = "application/json"})
+
+	local blocks = {}
+	for i, pos in ipairs(self.knownBlocks) do
+		table.insert(blocks, {
+			x = tostring(pos.x),
+			y = tostring(pos.y),
+			z = tostring(pos.z),
+			type = self.blockData[i].name
+		})
+	end
+
+	local payload = textutils.serializeJSON({ blocks = blocks })
+	local response = http.post(BLOCK_ENDPOINT, payload, {["Content-Type"] = "application/json"})
 	if response then
 		response.close()
-		-- Only clear once the server has actually taken them
 		self.knownBlocks = {}
 		self.blockData = {}
 		return true
@@ -287,12 +310,9 @@ end
 function Turtle:TurnToAxis(direction)
 	local index = GetCompassDirectionIndex(direction)
 	if (index == -1) then return false end
-	-- Turn whichever way is shorter rather than always turning right
-	local turns = (index - self.direction) % 4
-	if (turns == 3) then
-		self:TurnLeft()
-	else
-		for _ = 1, turns do self:TurnRight() end
+	-- TODO: Smart Turning, this just turns right until its the right direction
+	while (index ~= self.direction) do
+		self:TurnRight() -- Turn right until the direction
 	end
 	return true
 end
@@ -341,14 +361,24 @@ function Turtle:FollowPath(path)
 	end
 	return true
 end
--- Requests a path to the http server and returns the received request
+-- Requests a path to the http server and returns the received path
 function Turtle:RequestPath(destination)
 	local payload = textutils.serializeJSON({
-		turtle_id = os.getComputerID(),
-		position = self.position,
-		wanted_position = destination
+		startBlock = {
+			x = tostring(self.position.x),
+			y = tostring(self.position.y),
+			z = tostring(self.position.z),
+			type = "minecraft:air" -- not used by the pathfinder, just required by the struct
+		},
+		endBlock = {
+			x = tostring(destination.x),
+			y = tostring(destination.y),
+			z = tostring(destination.z),
+			type = "minecraft:air"
+		}
 	})
-	local response = http.post(API_URL, payload, {["Content-Type"] = "application/json"})
+
+	local response = http.post(PATH_ENDPOINT, payload, {["Content-Type"] = "application/json"})
 	if response then
 		local jsonString = response.readAll()
 		response.close()
@@ -374,18 +404,18 @@ end
 -- Arguably, you should never turn this off.
 -- I cant imagine a use case where you'd want a turtle to just go and kill itself
 function Turtle:SetFuelRecall(doRecall)
-	self.doesFuelRecall = doRecall
+    self.doesFuelRecall = doRecall
 end
 -- Gets the amount of available inventory slots of the turtle
 function Turtle:GetInventorySpace()
-	local freeSlots = 0
-	for slot = 1, 16 do
-		if (turtle.getItemCount(slot) == 0) then
-			freeSlots = freeSlots + 1
-		end
-	end
- 
-	return freeSlots
+    local freeSlots = 0
+    for slot = 1, 16 do
+        if (turtle.getItemCount(slot) == 0) then
+            freeSlots = freeSlots + 1
+        end
+    end
+
+    return freeSlots
 end
 -- Mine the block directly ahead
 function Turtle:Mine(tool)
@@ -413,7 +443,7 @@ end
 function Turtle:MineDirection(tool, direction)
 	if (direction == 1) then return self:Mine(tool)
 	elseif (direction == 5) then return self:MineDown(tool)
-	elseif (direction == 6) then return self:MineUp(tool)
+	elseif (direction == 6) then	return self:MineUp(tool)
 	elseif (direction == 2) then
 		self:TurnRight()
 		return self:Mine(tool)
@@ -429,10 +459,7 @@ function Turtle:MineDirection(tool, direction)
 end
 -- Pings and receives a response from the http server
 function Turtle:Ping()
-	local payload = textutils.serializeJSON({
-		turtle_id = os.getComputerID()
-	})
-	local response = http.post(API_URL, payload, {["Content-Type"] = "application/json"})
+	local response = http.post(PING_ENDPOINT, "", {["Content-Type"] = "application/json"})
 	if response then
 		response.close()
 		return true
@@ -440,4 +467,5 @@ function Turtle:Ping()
 		return false
 	end
 end
+
 return Turtle

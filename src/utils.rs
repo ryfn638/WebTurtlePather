@@ -13,7 +13,7 @@ pub enum Direction {
 }
 
 #[path = "db_ops.rs"]
-mod db_search;
+pub mod db_search;
 
 #[derive(Clone, Eq, Debug)]
 pub struct Block {
@@ -101,7 +101,6 @@ fn search_node(
     None
 }
 
-// FIXED: Cleaned out Sqlite. Explicitly using Postgres connection pool.
 async fn init_hash_map(start_block: &Block, pool: &sqlx::Pool<sqlx::Postgres>) -> Result<HashMap<Block, String>, sqlx::Error> {
     let mut items = HashMap::new();
     let all_blocks = db_search::search_range(pool, start_block, SEARCH_RANGE).await?;
@@ -111,7 +110,6 @@ async fn init_hash_map(start_block: &Block, pool: &sqlx::Pool<sqlx::Postgres>) -
     Ok(items)
 }
 
-// FIXED: Cleaned out Sqlite. Explicitly using Postgres connection pool.
 pub async fn find_path(pool: &sqlx::Pool<sqlx::Postgres>, start: &Block, target: &Block) -> Result<Option<Vec<Direction>>, sqlx::Error> {
     let all_blocks = init_hash_map(start, pool).await?;
 

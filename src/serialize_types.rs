@@ -1,7 +1,7 @@
 #[path = "utils.rs"]
 mod utils;
 
-use axum::{extract::State, Json};
+use axum::{extract::State, Json, http::StatusCode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -21,6 +21,12 @@ pub struct SerializableBlock {
 pub struct SerializedPathPayload {
     pub start_block: SerializableBlock,
     pub end_block: SerializableBlock,
+}
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SerializedBlockPayload {
+    pub blocks: Vec<SerializableBlock>,
+		pub turtle_name : String,
 }
 
 // JSON Response Struct
@@ -73,7 +79,10 @@ pub async fn calculate_path(
     // Await the asynchronous pathfinder and bubble up internal DB errors safely
     let enum_path_result = utils::find_path(&pool, &start_block, &target_block)
         .await
-        .map_err(|_| StatusCodeResponse::InternalError)?;
+        .map_err(|e| {
+            eprintln!("find_path failed: {}", e);
+            StatusCodeResponse::InternalError
+        })?;
 
     let string_path = match enum_path_result {
         Some(path) => serialize_path(&path),
@@ -84,6 +93,45 @@ pub async fn calculate_path(
 
     println!("Path Result Sent");
     Ok(Json(response))
+}
+
+pub async fn add_block(
+	State(pool): State<sqlx::Pool<sqlx::Postgres>>,
+  Json(payload): Json<SerializedBlockPayload>,) -> Result<StatusCode, StatusCodeResponse>
+	{
+		println!("Received Block Upload Request");
+		for block in payload.blocks
+		{
+	    let new_block = utils::Block {
+	        x: block.x.parse::<i64>().map_err(|_| StatusCodeResponse::BadRequest)?,
+	        y: block.y.parse::<i64>().map_err(|_| StatusCodeResponse::BadRequest)?,
+	        z: block.z.parse::<i64>().map_err(|_| StatusCodeResponse::BadRequest)?,
+	        block_type: block.block_type,
+	    };
+
+			utils::db_search::add_record(
+				&pool,
+				&payload.turtle_name,
+				&new_block.block_type,
+				new_block.x as i32,
+				new_block.y as i32,
+				new_block.z as i32
+			)
+			.await
+			.map_err(|e| {
+				eprintln!("add_record failed: {}", e);
+				StatusCodeResponse::InternalError
+			})?;
+
+		}
+
+		return Ok(StatusCode::OK)
+	}
+
+pub async fn ping() -> StatusCode
+{
+	// Later on this should check if the turtle is on a whitelist
+	StatusCode::OK
 }
 
 // Minimal error enum to satisfy web framework return rules safely

@@ -5,15 +5,17 @@ use sqlx::{postgres::PgPoolOptions, Connection, PgConnection, Executor, Pool, Po
 use super::Block;
 
 // General DB Operations
-async fn add_record(
+pub async fn add_record(
     pool: &sqlx::Pool<sqlx::Postgres>,
+		turtle_name : &String,
     block_name: &str,
     x_pos: i32,
     y_pos: i32,
     z_pos: i32
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO blocks (name, x, y, z) VALUES ($1, $2, $3, $4)")
+    sqlx::query("INSERT INTO blocks (blockdata, turtlename, blockx, blocky, blockz) VALUES ($1, $2, $3, $4, $5)")
         .bind(block_name)
+				.bind(turtle_name)
         .bind(x_pos)
         .bind(y_pos)
         .bind(z_pos)
@@ -23,7 +25,7 @@ async fn add_record(
     Ok(())
 }
 
-async fn remove_record(
+pub async fn remove_record(
     pool: &sqlx::Pool<sqlx::Postgres>,
     id: i32
 ) -> Result<(), sqlx::Error> {
@@ -35,8 +37,7 @@ async fn remove_record(
     Ok(())
 }
 
-// 3. MODIFY RECORD
-async fn modify_record(
+pub async fn modify_record(
     pool: &sqlx::Pool<sqlx::Postgres>,
     id: i32,
     block_name: &str,
